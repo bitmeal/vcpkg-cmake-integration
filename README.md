@@ -1,23 +1,26 @@
 # vcpkg 💕 CMake integration
-Buckle up and get lift
-* add `include(vcpkg.cmake)` before your call to `project(...)` (in your top-level `CMakeListst.txt`)
+**Buckle up and get lift:**
+* add `include(vcpkg.cmake)` before your call to `project(...)` [in your top-level `CMakeListst.txt`]
 * have a **`vcpkg.json` manifest** in your project?
-  * YES: **DONE! 🚀**
-  * NO: add packages by calling `vcpkg_add_package(<pkg_name>)`
-* **DONE! 🚀**
+  * **YES:** ***DONE!* 🚀**
+  * **NO:** add packages by calling `vcpkg_add_package(<pkg_name>)`
+* ***DONE!* 🚀**
 
 ```cmake
 # EXAMPLE
 
-set(VCPKG_VERSION edge)
+set(VCPKG_VERSION edge) # optional
 include(vcpkg.cmake)
 
 project(awesome-project)
 
+# without 'vcpkg.json'-manifest
+vcpkg_add_package(fmt)
+
 ...
 ```
 
-What does it do?
+**What does it do?**
 * fetch *vcpkg*
 * build *vcpkg* if required
 * *"numeric"*  or semantic versioning of *vcpkg* itself
