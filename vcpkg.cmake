@@ -42,7 +42,7 @@ function(vcpkg_init)
         if(WIN32)
             set(VCPKG_BUILD_CMD "bootstrap-vcpkg.bat")
         else()
-            set(VCPKG_BUILD_CMD "bootstrap-vcpkg.sh")
+            set(VCPKG_BUILD_CMD "./bootstrap-vcpkg.sh")
         endif()
 
         # prepare and clone git sources
