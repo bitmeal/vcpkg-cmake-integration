@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.12.0)
 set(CMAKE_CXX_STANDARD 17)
 
 # init VCPKG [before call to project()]
-set(VCPKG_VERSION edge)
+set(VCPKG_VERSION latest)
 include(../../vcpkg.cmake)
 
 project(vcpkg-cmake-test VERSION 0.1.0)
@@ -18,14 +18,15 @@ project(vcpkg-cmake-test VERSION 0.1.0)
 vcpkg_add_package(fmt)
 vcpkg_add_package(plog)
 
+
+
 find_package(fmt CONFIG REQUIRED)
-find_package(plog CONFIG REQUIRED)
+find_path(PLOG_INCLUDE_DIRS "plog/Init.h")
 
 
-# build "tests"
+# build "examples"
 add_executable(fmt_test ../test-fmt.cpp)
 target_link_libraries(fmt_test fmt::fmt)
 
 add_executable(plog_test ../test-plog.cpp)
-target_link_libraries(plog_test plog)
-
+target_include_directories(plog_test PRIVATE ${PLOG_INCLUDE_DIRS})
