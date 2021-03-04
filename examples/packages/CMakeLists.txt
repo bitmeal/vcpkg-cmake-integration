@@ -4,8 +4,8 @@
 # 
 # Copyright (C) 2020, Arne Wendt
 #
-cmake_minimum_required(VERSION 3.12.0)
-set(CMAKE_CXX_STANDARD 17)
+cmake_minimum_required(VERSION 3.11.0)
+set(CMAKE_CXX_STANDARD 11)
 
 # init VCPKG [before call to project()]
 set(VCPKG_VERSION latest)
