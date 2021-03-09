@@ -4,7 +4,9 @@
 # 
 # Copyright (C) 2021, Arne Wendt
 #
-cmake_minimum_required(VERSION 3.11.0)
+
+# vcpkg examples use 3.0.0, assuming this as minimum version for vcpkg cmake toolchain
+cmake_minimum_required(VERSION 3.0.0)
 
 # config:
 # - VCPKG_VERSION:
@@ -30,140 +32,184 @@ if(NOT DEFINED VCPKG_METRICS_FLAG)
 endif()
 
 
+# check_conditions and find neccessary packages
+find_package(Git REQUIRED)
+
+
+
 # get VCPKG
 function(vcpkg_init)
-    # test for vcpkg availability
-    if(VCPKG_EXECUTABLE EQUAL "" OR NOT DEFINED VCPKG_EXECUTABLE)
-        # set varible to expected path; necessary to detect after a CMake cache clean
-        vcpkg_set_vcpkg_executable()
-    endif()
+    # set environment (not cached)
     
-    execute_process(COMMAND ${VCPKG_EXECUTABLE} version RESULT_VARIABLE VCPKG_TEST_RETVAL OUTPUT_VARIABLE VCPKG_VERSION_BANNER)
-    if(NOT VCPKG_TEST_RETVAL EQUAL "0")
-        # reset executable path
-        set(VCPKG_EXECUTABLE "")
+    # mask musl-libc if masked prior
+    if(VCPKG_MASK_MUSL_LIBC)
+        vcpkg_mask_if_musl_libc()
+    endif()
 
-        ## getting vcpkg
-        message(STATUS "No VCPKG found; getting new version ready...")
+    # use system binaries
+    if(VCPKG_FORCE_SYSTEM_BINARIES)
+        set(ENV{VCPKG_FORCE_SYSTEM_BINARIES} "1")
+    endif()
 
-        # test options
-        if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
-            message(STATUS "Placing VCPKG in: ${CMAKE_CURRENT_BINARY_DIR}")
-            set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
-        endif()
-        string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
+    # end set environment
 
-        # select compile script
-        if(WIN32)
-            set(VCPKG_BUILD_CMD ".\\bootstrap-vcpkg.bat")
-        else()
-            set(VCPKG_BUILD_CMD "./bootstrap-vcpkg.sh")
-        endif()
-
-
-        # prepare and clone git sources
-        # clone to: <project>/deps/vcpkg
-        include(FetchContent)
-        set(FETCHCONTENT_QUIET on)
-        set(FETCHCONTENT_BASE_DIR "${VCPKG_PARENT_DIR}")
-        FetchContent_Declare(
-            vcpkg
-
-            GIT_REPOSITORY "https://github.com/microsoft/vcpkg"
-            GIT_PROGRESS true
-
-            SOURCE_DIR "${VCPKG_PARENT_DIR}/vcpkg"
-            BINARY_DIR ""
-            BUILD_IN_SOURCE true
-            CONFIGURE_COMMAND ""
-            BUILD_COMMAND ""
-        )
-        FetchContent_Populate(vcpkg)
+    # test for vcpkg availability
+    # executable path set ? assume all ok : configure
+    if(VCPKG_EXECUTABLE EQUAL "" OR NOT DEFINED VCPKG_EXECUTABLE)
+        # configure vcpkg
 
         # use system binaries?
         # IMPORTANT: we have to use system binaries on musl-libc systems, as vcpkg fetches binaries linked against glibc!
         vcpkg_set_use_system_binaries_flag()
 
-        # compute git checkout target
-        vcpkg_set_version_checkout()
-
-        # checkout asked version
-        execute_process(COMMAND git checkout ${VCPKG_VERSION_CHECKOUT} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_GIT_TAG_CHECKOUT_OK)
-        if(NOT VCPKG_GIT_TAG_CHECKOUT_OK EQUAL "0")
-            message(FATAL_ERROR "Checking out VCPKG version/tag ${VCPKG_VERSION} failed!")
-        endif()
-
-        # wrap -disableMetrics in extra single quotes for windows
-        # if(WIN32 AND NOT VCPKG_METRICS_FLAG EQUAL "" AND DEFINED VCPKG_METRICS_FLAG)
-        #     set(VCPKG_METRICS_FLAG "'${VCPKG_METRICS_FLAG}'")
-        # endif()
-
-        # build vcpkg
-        execute_process(COMMAND ${VCPKG_BUILD_CMD} ${VCPKG_USE_SYSTEM_BINARIES_FLAG} ${VCPKG_METRICS_FLAG} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_BUILD_OK)
-        if(NOT VCPKG_BUILD_OK EQUAL "0")
-            message(FATAL_ERROR "Bootstrapping VCPKG failed!")
+        # mask musl-libc if no triplet is provided
+        if(
+            ( ENV{VCPKG_DEFAULT_TRIPLET} EQUAL "" OR NOT DEFINED ENV{VCPKG_DEFAULT_TRIPLET}) AND
+            ( ENV{VCPKG_DEFAULT_HOST_TRIPLET} EQUAL "" OR NOT DEFINED ENV{VCPKG_DEFAULT_HOST_TRIPLET}) AND
+            ( VCPKG_TARGET_TRIPLET EQUAL "" OR NOT DEFINED VCPKG_TARGET_TRIPLET)
+        )
+            # mask musl-libc from vcpkg
+            vcpkg_mask_if_musl_libc()
         else()
-            message(STATUS "Built VCPKG!")
+            message(WARNING "One of VCPKG_TARGET_TRIPLET, ENV{VCPKG_DEFAULT_TRIPLET} or ENV{VCPKG_DEFAULT_HOST_TRIPLET} has been defined. NOT CHECKING FOR musl-libc MASKING!")
         endif()
 
-
-        # get vcpkg path
+    
+        # set varible to expected path; necessary to detect after a CMake cache clean
         vcpkg_set_vcpkg_executable()
+    
+        # executable is present ? configuring done : fetch and build
+        execute_process(COMMAND ${VCPKG_EXECUTABLE} version RESULT_VARIABLE VCPKG_TEST_RETVAL OUTPUT_VARIABLE VCPKG_VERSION_BANNER)
+        if(NOT VCPKG_TEST_RETVAL EQUAL "0")
+            # reset executable path to prevent malfunction/wrong assumptions in case of error
+            set(VCPKG_EXECUTABLE "")
 
-        # test vcpkg binary
-        execute_process(COMMAND ${VCPKG_EXECUTABLE} version RESULT_VARIABLE VCPKG_OK OUTPUT_VARIABLE VCPKG_VERSION_BANNER)
-        if(NOT VCPKG_OK EQUAL "0")
-            message(FATAL_ERROR "VCPKG executable failed test!")
-        else()
-            message(STATUS "VCPKG ready!")
-            string(REGEX REPLACE "\n$" "" VCPKG_VERSION_BANNER "${VCPKG_VERSION_BANNER}")
-            string(REGEX REPLACE "\n\n" " / " VCPKG_VERSION_BANNER "${VCPKG_VERSION_BANNER}")
-            message(STATUS "${VCPKG_VERSION_BANNER}")
+            # getting vcpkg
+            message(STATUS "No VCPKG executable found; getting new version ready...")
 
-            set(VCPKG_EXECUTABLE ${VCPKG_EXECUTABLE} CACHE STRING "vcpkg executable path" FORCE)
+            # test if sources are present
 
-            message(STATUS "Install packages using VCPKG:")
-            message(STATUS " * from your CMakeLists.txt by calling vcpkg_add_package(<PKG_NAME>)")
-            message(STATUS " * by providing a 'vcpkg.json' in your project directory [https://devblogs.microsoft.com/cppblog/take-control-of-your-vcpkg-dependencies-with-versioning-support/]")
+            # test options
+            if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
+                message(STATUS "Placing VCPKG in: ${CMAKE_CURRENT_BINARY_DIR}")
+                set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
+            endif()
+            string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
+
+            # select compile script
+            if(WIN32)
+                set(VCPKG_BUILD_CMD ".\\bootstrap-vcpkg.bat")
+            else()
+                set(VCPKG_BUILD_CMD "./bootstrap-vcpkg.sh")
+            endif()
+        
+            # prepare and clone git sources
+            # include(FetchContent)
+            # set(FETCHCONTENT_QUIET on)
+            # set(FETCHCONTENT_BASE_DIR "${VCPKG_PARENT_DIR}")
+            # FetchContent_Declare(
+            #     vcpkg
+
+            #     GIT_REPOSITORY "https://github.com/microsoft/vcpkg"
+            #     GIT_PROGRESS true
+
+            #     SOURCE_DIR "${VCPKG_PARENT_DIR}/vcpkg"
+            #     BINARY_DIR ""
+            #     BUILD_IN_SOURCE true
+            #     CONFIGURE_COMMAND ""
+            #     BUILD_COMMAND ""
+            # )
+            # FetchContent_Populate(vcpkg)
+
+            # check for bootstrap script ? ok : fetch repository
+            if(NOT EXISTS "${VCPKG_PARENT_DIR}/${VCPKG_BUILD_CMD}" AND NOT EXISTS "${VCPKG_PARENT_DIR}\\${VCPKG_BUILD_CMD}")
+                message(STATUS "VCPKG bootstrap script not found; fetching...")
+                # directory existent ? delete
+                if(EXISTS "${VCPKG_PARENT_DIR}/vcpkg")
+                    file(REMOVE_RECURSE "${VCPKG_PARENT_DIR}/vcpkg")
+                endif()
+
+                # fetch vcpkg repo
+                execute_process(COMMAND ${GIT_EXECUTABLE} clone https://github.com/microsoft/vcpkg WORKING_DIRECTORY "${VCPKG_PARENT_DIR}" RESULT_VARIABLE VCPKG_GIT_CLONE_OK)
+                if(NOT VCPKG_GIT_CLONE_OK EQUAL "0")
+                    message(FATAL_ERROR "Cloning VCPKG repository from https://github.com/microsoft/vcpkg failed!")
+                endif()
+            endif()
+            
+            # compute git checkout target
+            vcpkg_set_version_checkout()
+
+            # checkout asked version
+            execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${VCPKG_VERSION_CHECKOUT} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_GIT_TAG_CHECKOUT_OK)
+            if(NOT VCPKG_GIT_TAG_CHECKOUT_OK EQUAL "0")
+                message(FATAL_ERROR "Checking out VCPKG version/tag ${VCPKG_VERSION} failed!")
+            endif()
+
+            # wrap -disableMetrics in extra single quotes for windows
+            # if(WIN32 AND NOT VCPKG_METRICS_FLAG EQUAL "" AND DEFINED VCPKG_METRICS_FLAG)
+            #     set(VCPKG_METRICS_FLAG "'${VCPKG_METRICS_FLAG}'")
+            # endif()
+
+            # build vcpkg
+            execute_process(COMMAND ${VCPKG_BUILD_CMD} ${VCPKG_USE_SYSTEM_BINARIES_FLAG} ${VCPKG_METRICS_FLAG} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_BUILD_OK)
+            if(NOT VCPKG_BUILD_OK EQUAL "0")
+                message(FATAL_ERROR "Bootstrapping VCPKG failed!")
+            else()
+                message(STATUS "Built VCPKG!")
+            endif()
+
+
+            # get vcpkg path
+            vcpkg_set_vcpkg_executable()
+
+            # test vcpkg binary
+            execute_process(COMMAND ${VCPKG_EXECUTABLE} version RESULT_VARIABLE VCPKG_OK OUTPUT_VARIABLE VCPKG_VERSION_BANNER)
+            if(NOT VCPKG_OK EQUAL "0")
+                message(FATAL_ERROR "VCPKG executable failed test!")
+            else()
+                message(STATUS "VCPKG OK!")
+                message(STATUS "Install packages using VCPKG:")
+                message(STATUS " * from your CMakeLists.txt by calling vcpkg_add_package(<PKG_NAME>)")
+                message(STATUS " * by providing a 'vcpkg.json' in your project directory [https://devblogs.microsoft.com/cppblog/take-control-of-your-vcpkg-dependencies-with-versioning-support/]")
+            endif()
         endif()
-    else()
-        # version banner is set while testing for availability
+
+        # we have fetched and built, but a clean has been performed
+        # version banner is set while testing for availability or after build
         message(STATUS "VCPKG using:")
         string(REGEX REPLACE "\n.*$" "" VCPKG_VERSION_BANNER "${VCPKG_VERSION_BANNER}")
         message(STATUS "${VCPKG_VERSION_BANNER}")
-    endif()
 
-    set(VCPKG_EXECUTABLE ${VCPKG_EXECUTABLE} PARENT_SCOPE)
+        # cache executable path
+        set(VCPKG_EXECUTABLE ${VCPKG_EXECUTABLE} CACHE STRING "vcpkg executable path" FORCE)
     
-    # mask musl-libc
-    vcpkg_mask_if_musl_libc()
-
-    # set toolchain
-    set(CMAKE_TOOLCHAIN_FILE "${VCPKG_PARENT_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
-    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} CACHE STRING "")
+        # set toolchain
+        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_PARENT_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
+        set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} CACHE STRING "")
+    endif()
 endfunction()
 
 
-# make target triplet from current compiler selection and platform
-# set VCPKG_TARGET_TRIPLET in parent scope
-function(vcpkg_make_set_triplet)
-    # get platform: win/linux ONLY
-    if(WIN32)
-        set(PLATFORM "windows")
-    else()
-        set(PLATFORM "linux")
-    endif()
+# # make target triplet from current compiler selection and platform
+# # set VCPKG_TARGET_TRIPLET in parent scope
+# function(vcpkg_make_set_triplet)
+#     # get platform: win/linux ONLY
+#     if(WIN32)
+#         set(PLATFORM "windows")
+#     else()
+#         set(PLATFORM "linux")
+#     endif()
 
-    # get bitness: 32/64 ONLY
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(BITS 64)
-    else()
-        set(BITS 86)
-    endif()
+#     # get bitness: 32/64 ONLY
+#     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#         set(BITS 64)
+#     else()
+#         set(BITS 86)
+#     endif()
 
-    set(VCPKG_TARGET_TRIPLET "x${BITS}-${PLATFORM}" PARENT_SCOPE)
-endfunction()
+#     set(VCPKG_TARGET_TRIPLET "x${BITS}-${PLATFORM}" PARENT_SCOPE)
+# endfunction()
 
 # set VCPKG_EXECUTABLE to assumed path based on VCPKG_PARENT_DIR
 # vcpkg_set_vcpkg_executable([VCPKG_PARENT_DIR_EXPLICIT])
@@ -272,6 +318,8 @@ function(vcpkg_mask_musl_libc)
     set(ENV{VCPKG_DEFAULT_HOST_TRIPLET} "${VCPKG_TARGET_TRIPLET}")
     set(VCPKG_TARGET_TRIPLET "${VCPKG_TARGET_TRIPLET}" CACHE STRING "vcpkg default target triplet (possibly dont change)")
     message(STATUS "VCPKG: System is using musl-libc; fixing default target triplet as: ${VCPKG_TARGET_TRIPLET}")
+
+    set(VCPKG_MASK_MUSL_LIBC ON CACHE INTERNAL "masked musl-libc")
 endfunction()
 
 # automate musl-libc masking
@@ -308,12 +356,16 @@ endfunction()
 
 # install package
 function(vcpkg_add_package PKG_NAME)
-    if(VCPKG_TARGET_TRIPLET STREQUAL "" OR NOT DEFINED VCPKG_TARGET_TRIPLET)
-        vcpkg_make_set_triplet()
+    # if(VCPKG_TARGET_TRIPLET STREQUAL "" OR NOT DEFINED VCPKG_TARGET_TRIPLET)
+    #     vcpkg_make_set_triplet()
+    # endif()
+    set(VCPKG_TARGET_TRIPLET_FLAG "")
+    if(DEFINED VCPKG_TARGET_TRIPLET AND NOT VCPKG_TARGET_TRIPLET EQUAL "")
+        set(VCPKG_TARGET_TRIPLET_FLAG "--triplet=${VCPKG_TARGET_TRIPLET}")
     endif()
 
     message(STATUS "VCPKG: fetching ${PKG_NAME} via vcpkg_add_package")
-    execute_process(COMMAND ${VCPKG_EXECUTABLE} --triplet=${VCPKG_TARGET_TRIPLET} --feature-flags=-manifests --disable-metrics install "${PKG_NAME}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
+    execute_process(COMMAND ${VCPKG_EXECUTABLE} ${VCPKG_TARGET_TRIPLET_FLAG} --feature-flags=-manifests --disable-metrics install "${PKG_NAME}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
     if(NOT VCPKG_INSTALL_OK EQUAL "0")
         message(FATAL_ERROR "VCPKG: failed fetching ${PKG_NAME}! Did you call vcpkg_init(<...>)?")
     endif()
