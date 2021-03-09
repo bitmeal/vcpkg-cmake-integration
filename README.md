@@ -1,5 +1,6 @@
 # vcpkg 💕 CMake integration
 **Buckle up and get lift:**
+* add a copy of `vcpkg.cmake` to your project, or include as git-*submodule*
 * add `include(vcpkg.cmake)` before your call to `project(...)` [in your top-level `CMakeListst.txt`]
 * have a **`vcpkg.json` manifest** in your project?
   * **YES:** ***DONE!* 🚀**
@@ -21,12 +22,11 @@ vcpkg_add_package(fmt)
 ```
 
 **What does it do?**
-* fetch *vcpkg*
-* build *vcpkg* if required
-* *"numeric"*  or semantic versioning of *vcpkg* itself
-* mask *musl-libc* from vcpkg as `x64-linux`/`x86-linux` ⚡
+* fetch *vcpkg* & build if required
+* provide *"numeric"* or semantic versioning of *vcpkg* itself
 * enable the *vcpkg*-*CMake* toolchain
-* installs all requested packages
+* install all requested packages
+* mask *musl-libc* from vcpkg as `x64-linux`/`x86-linux` and auto configure system binary usage ⚡
   
   
 ## using `vcpkg.json`-manifests
@@ -47,9 +47,21 @@ Valid values for `<version>` are:
 * `<commit-hash>/<tag>`: any tag or commit hash from the *vcpkg*-repo may be used
   
   
+## setting target/host architecture
+To manually configure/override target or host architecture, override these before your call to `include(vcpkg.cmake)`. If any of the following variables is set, no additional configuration will be performed. *Remember to set environment variables on every run, as they are not cached!*
+* `ENV{VCPKG_DEFAULT_TRIPLET}`
+* `ENV{VCPKG_DEFAULT_HOST_TRIPLET}`
+* `VCPKG_TARGET_TRIPLET`
+
+
 ## required system libs
-Yes, bootstrapping *vcpkg* only goes that far, but: Setting up a build system and dev environment is not *vcpk*s job.
+Yes, bootstrapping *vcpkg* only goes that far, but: Setting up a build system and dev environment is not *vcpk*'s job.
 *This is most relevant for use in build containers.* Most of the dependencies below are required to build C++ code in general and not *vcpkg* specific.
+
+General requirements
+* *C++* compiler toolchain
+* *CMake*
+* *Git*
 
 ### Ubuntu/Debian
 ```
@@ -70,23 +82,10 @@ apk add libc6-compat
 
 ## ⚡ compatibility ⚡
 **Unsure!**
-  
-  
-Targeted platforms are "standard" Linux distros using *glibc* and Windows. Alpine, using *musl-libc*, is handled as an exception for its wide use in containerized applications.
 
-**Expect** everything **other** than these target triplets to **break**:
-* `x86-linux`
-* `x64-linux`
-* `x86-windows`
-* `x64-windows`
-* `[x86-linux-musl]` *masked*
-* `[x64-linux-musl]` *masked*
-
+Targeted platforms are "standard" Linux distros using *glibc* and Windows. Alpine, using *musl-libc*, is handled as an exception for its wide use in containerized applications. As long as the auto detected target-triplet of your platform is supported by *vcpkg* itself, no problems should arise.
 
 
 ## TODO
 * testing *CMake* function individually
-* cache handling
-* check if target triplets may be set by user or are overwritten
 * checkout `baseline` when version is unset and using manifest
-* detect OSX
