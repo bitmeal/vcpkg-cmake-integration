@@ -53,6 +53,7 @@ function(vcpkg_init)
 
     # end set environment
 
+
     # test for vcpkg availability
     # executable path set ? assume all ok : configure
     if(VCPKG_EXECUTABLE EQUAL "" OR NOT DEFINED VCPKG_EXECUTABLE)
@@ -75,6 +76,13 @@ function(vcpkg_init)
         endif()
 
     
+        # test options
+        if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
+            message(STATUS "VCPKG using: ${CMAKE_CURRENT_BINARY_DIR}")
+            set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
+        endif()
+        string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
+
         # set varible to expected path; necessary to detect after a CMake cache clean
         vcpkg_set_vcpkg_executable()
     
@@ -86,15 +94,6 @@ function(vcpkg_init)
 
             # getting vcpkg
             message(STATUS "No VCPKG executable found; getting new version ready...")
-
-            # test if sources are present
-
-            # test options
-            if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
-                message(STATUS "Placing VCPKG in: ${CMAKE_CURRENT_BINARY_DIR}")
-                set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
-            endif()
-            string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
 
             # select compile script
             if(WIN32)
