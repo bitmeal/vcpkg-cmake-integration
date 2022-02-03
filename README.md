@@ -30,7 +30,7 @@ vcpkg_add_package(fmt)
   
   
 ## using `vcpkg.json`-manifests
-When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled.
+When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. **Using manifests is (at time of writing) still considered *experimental*. Using versioning and the `versions`-key may currently require a newer *vcpkg* version than tagged as release! Check the [official resources](https://github.com/microsoft/vcpkg) for the state of manifest use! The `edge`-version supports versioning, as per the examples.**
 
 
 ## *vcpkg* versions

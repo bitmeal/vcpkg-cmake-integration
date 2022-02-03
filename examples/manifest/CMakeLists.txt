@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.0.0)
 set(CMAKE_CXX_STANDARD 11)
 
 # init VCPKG [before call to project()]
-set(VCPKG_VERSION latest)
+set(VCPKG_VERSION edge)
 include(../../vcpkg.cmake)
 
 project(vcpkg-cmake-test VERSION 0.1.0)
