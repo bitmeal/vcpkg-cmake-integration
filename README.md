@@ -30,8 +30,8 @@ vcpkg_add_package(fmt)
   
   
 ## using `vcpkg.json`-manifests
-When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. Using `versions` currently requires a newer *vcpkg* version than tagged. Be sure to use version `edge` as per the examples.
-  
+When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled.
+
 
 ## *vcpkg* versions
 To set the desired *vcpkg* version use:
@@ -55,7 +55,7 @@ To manually configure/override target or host architecture, override these befor
 
 
 ## required system libs
-Yes, bootstrapping *vcpkg* only goes that far, but: Setting up a build system and dev environment is not *vcpk*'s job.
+Yes, bootstrapping *vcpkg* only goes that far, but: Setting up a build system and dev environment is not *vcpkg*'s job.
 *This is most relevant for use in build containers.* Most of the dependencies below are required to build C++ code in general and not *vcpkg* specific.
 
 General requirements
@@ -71,7 +71,7 @@ apt install build-essential git cmake pkg-config curl zip unzip tar
 ### alpine
 Alpine uses `musl-libc` and can't use official binaries, as they are built against `glibc`. On alpine we detect `musl-libc` and need all system binaries available:
 ```
-apk add build-base git cmake extra-cmake-modules abuild ninja curl
+apk add build-base git cmake extra-cmake-modules abuild ninja curl zip
 ```
 `musl-libc` will be masked as standard `x86-linux`/`x64-linux`, you may need to add extended compatibility (select right version):
 ```bash
@@ -87,5 +87,5 @@ Targeted platforms are "standard" Linux distros using *glibc* and Windows. Alpin
 
 
 ## TODO
-* testing *CMake* function individually
+* testing *CMake* functions individually
 * checkout `baseline` when version is unset and using manifest

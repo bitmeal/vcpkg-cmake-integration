@@ -78,7 +78,7 @@ function(vcpkg_init)
     
         # test options
         if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
-            message(STATUS "VCPKG using: ${CMAKE_CURRENT_BINARY_DIR}")
+            message(STATUS "VCPKG from: ${CMAKE_CURRENT_BINARY_DIR}")
             set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
         endif()
         string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
