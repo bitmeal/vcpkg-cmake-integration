@@ -31,6 +31,11 @@ if(NOT DEFINED VCPKG_METRICS_FLAG)
     set(VCPKG_METRICS_FLAG "-disableMetrics" CACHE INTERNAL "flag to disable telemtry by default")
 endif()
 
+# enable rebuilding of packages if requested by changed configuration
+if(NOT DEFINED VCPKG_RECURSE_REBUILD_FLAG)
+    set(VCPKG_RECURSE_REBUILD_FLAG "--recurse" CACHE INTERNAL "enable rebuilding of packages if requested by changed configuration by default")
+endif()
+
 
 # check_conditions and find neccessary packages
 find_package(Git REQUIRED)
@@ -364,7 +369,7 @@ function(vcpkg_add_package PKG_NAME)
     endif()
 
     message(STATUS "VCPKG: fetching ${PKG_NAME} via vcpkg_add_package")
-    execute_process(COMMAND ${VCPKG_EXECUTABLE} ${VCPKG_TARGET_TRIPLET_FLAG} --feature-flags=-manifests --disable-metrics install "${PKG_NAME}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
+    execute_process(COMMAND ${VCPKG_EXECUTABLE} ${VCPKG_TARGET_TRIPLET_FLAG} ${VCPKG_RECURSE_REBUILD_FLAG} --feature-flags=-manifests --disable-metrics install "${PKG_NAME}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
     if(NOT VCPKG_INSTALL_OK EQUAL "0")
         message(FATAL_ERROR "VCPKG: failed fetching ${PKG_NAME}! Did you call vcpkg_init(<...>)?")
     endif()
