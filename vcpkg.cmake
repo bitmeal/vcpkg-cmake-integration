@@ -428,6 +428,11 @@ function(vcpkg_manifest_generation_init)
         string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies "[]")
         string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" "$schema" "\"https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json\"")
 
+        # write baseline commit
+        execute_process(COMMAND git log --pretty=format:'%H' -1 WORKING_DIRECTORY "${VCPKG_DIRECTORY}" OUTPUT_VARIABLE VCPKG_GENERATED_MANIFEST_BASELINE)
+        string(REPLACE "'" "" VCPKG_GENERATED_MANIFEST_BASELINE "${VCPKG_GENERATED_MANIFEST_BASELINE}")
+        string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" builtin-baseline "\"${VCPKG_GENERATED_MANIFEST_BASELINE}\"")
+
         vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
 
         # will be initialized from vcpkg_add_package call
@@ -496,11 +501,6 @@ function(vcpkg_manifest_generation_finalize)
     string(TOLOWER VCPKG_GENERATED_MANIFEST_NAME "${VCPKG_GENERATED_MANIFEST_NAME}")
     string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" name "\"${VCPKG_GENERATED_MANIFEST_NAME}\"")
     string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" version "\"${PROJECT_VERSION}\"")
-
-    # write baseline commit
-    execute_process(COMMAND git log --pretty=format:'%H' -1 WORKING_DIRECTORY "${VCPKG_DIRECTORY}" OUTPUT_VARIABLE VCPKG_GENERATED_MANIFEST_BASELINE)
-    string(REPLACE "'" "" VCPKG_GENERATED_MANIFEST_BASELINE "${VCPKG_GENERATED_MANIFEST_BASELINE}")
-    string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" builtin-baseline "\"${VCPKG_GENERATED_MANIFEST_BASELINE}\"")
 
     # make list from dependency dictionary
     # cache dependency object
