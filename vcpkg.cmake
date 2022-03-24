@@ -1,7 +1,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-# 
+#
 # Copyright (C) 2021, Arne Wendt
 #
 
@@ -17,7 +17,7 @@ cmake_minimum_required(VERSION 3.0.0)
 #       may be necessary on some systems as downloaded binaries may be linked against unsupported libraries
 #       musl-libc based distros (ALPINE)(!) require use of system binaries, but are AUTO DETECTED!
 # - VCPKG_FEATURE_FLAGS: modify feature flags; default are "manifests,versions"
-# 
+#
 # - VCPKG_NO_INIT: do not call vcpkg_init() automatically (for use testing)
 
 
@@ -45,7 +45,7 @@ find_package(Git REQUIRED)
 # get VCPKG
 function(vcpkg_init)
     # set environment (not cached)
-    
+
     # mask musl-libc if masked prior
     if(VCPKG_MASK_MUSL_LIBC)
         vcpkg_mask_if_musl_libc()
@@ -80,18 +80,29 @@ function(vcpkg_init)
             message(WARNING "One of VCPKG_TARGET_TRIPLET, ENV{VCPKG_DEFAULT_TRIPLET} or ENV{VCPKG_DEFAULT_HOST_TRIPLET} has been defined. NOT CHECKING FOR musl-libc MASKING!")
         endif()
 
-    
+
         # test options
         if(VCPKG_PARENT_DIR EQUAL "" OR NOT DEFINED VCPKG_PARENT_DIR)
-            message(STATUS "VCPKG from: ${CMAKE_CURRENT_BINARY_DIR}")
-            set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
+            if(CMAKE_SCRIPT_MODE_FILE)
+                 message(FATAL_ERROR "Explicitly specify VCPKG_PARENT_DIR when running in script mode!")
+            else()
+                message(STATUS "VCPKG from: ${CMAKE_CURRENT_BINARY_DIR}")
+                set(VCPKG_PARENT_DIR "${CMAKE_CURRENT_BINARY_DIR}/")
+            endif()
         endif()
         string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
+
+        # test if VCPKG_PARENT_DIR has to be created in script mode
+        if(CMAKE_SCRIPT_MODE_FILE AND NOT EXISTS "${VCPKG_PARENT_DIR}")
+            message(STATUS "Creating vcpkg parent directory")
+            file(MAKE_DIRECTORY "${VCPKG_PARENT_DIR}")
+        endif()
+
 
         # set path/location varibles to expected path; necessary to detect after a CMake cache clean
         vcpkg_set_vcpkg_directory_from_parent()
         vcpkg_set_vcpkg_executable()
-    
+
         # executable is present ? configuring done : fetch and build
         execute_process(COMMAND ${VCPKG_EXECUTABLE} version RESULT_VARIABLE VCPKG_TEST_RETVAL OUTPUT_VARIABLE VCPKG_VERSION_BANNER)
         if(NOT VCPKG_TEST_RETVAL EQUAL "0")
@@ -107,7 +118,7 @@ function(vcpkg_init)
             else()
                 set(VCPKG_BUILD_CMD "./bootstrap-vcpkg.sh")
             endif()
-        
+
             # prepare and clone git sources
             # include(FetchContent)
             # set(FETCHCONTENT_QUIET on)
@@ -140,7 +151,7 @@ function(vcpkg_init)
                     message(FATAL_ERROR "Cloning VCPKG repository from https://github.com/microsoft/vcpkg failed!")
                 endif()
             endif()
-            
+
             # compute git checkout target
             vcpkg_set_version_checkout()
 
@@ -190,7 +201,18 @@ function(vcpkg_init)
 
         # initialize manifest generation
         vcpkg_manifest_generation_init()
-    
+
+        # install from manifest if ran in script mode
+        if(CMAKE_SCRIPT_MODE_FILE)
+            message(STATUS "Running in script mode to setup environment: trying dependency installation from manifest!")
+            if(EXISTS "./vcpkg.json")
+                message(STATUS "Found vcpkg.json; installing...")
+                vcpkg_install_manifest()
+            else()
+                message(STATUS "NOT found vcpkg.json; skipping installation")
+            endif()
+        endif()
+
         # set toolchain
         set(CMAKE_TOOLCHAIN_FILE "${VCPKG_DIRECTORY}/scripts/buildsystems/vcpkg.cmake")
         set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
@@ -395,18 +417,19 @@ function(vcpkg_add_package PKG_NAME)
 endfunction()
 
 
-# # install packages from manifest
-# function(vcpkg_install_manifest)
-#     if(VCPKG_TARGET_TRIPLET STREQUAL "" OR NOT DEFINED VCPKG_TARGET_TRIPLET)
-#         vcpkg_make_set_triplet()
-#     endif()
-#     
-#     message(STATUS "VCPKG: install from manifest; using target triplet: ${VCPKG_TARGET_TRIPLET}")
-#     execute_process(COMMAND ${VCPKG_EXECUTABLE} --triplet=${VCPKG_TARGET_TRIPLET} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
-#     if(NOT VCPKG_INSTALL_OK EQUAL "0")
-#         message(FATAL_ERROR "VCPKG: install from manifest failed")
-#     endif()
-# endfunction()
+# install packages from manifest in script mode
+function(vcpkg_install_manifest)
+    # if(VCPKG_TARGET_TRIPLET STREQUAL "" OR NOT DEFINED VCPKG_TARGET_TRIPLET)
+    #     vcpkg_make_set_triplet()
+    # endif()
+    # message(STATUS "VCPKG: install from manifest; using target triplet: ${VCPKG_TARGET_TRIPLET}")
+    # execute_process(COMMAND ${VCPKG_EXECUTABLE} --triplet=${VCPKG_TARGET_TRIPLET} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
+    
+    execute_process(COMMAND ${VCPKG_EXECUTABLE} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY "./" RESULT_VARIABLE VCPKG_INSTALL_OK)
+    if(NOT VCPKG_INSTALL_OK EQUAL "0")
+        message(FATAL_ERROR "VCPKG: install from manifest failed")
+    endif()
+endfunction()
 
 ## manifest generation requires CMake > 3.19
 function(vcpkg_manifest_generation_update_cache VCPKG_GENERATED_MANIFEST)
@@ -512,7 +535,7 @@ function(vcpkg_manifest_generation_finalize)
     if(VCPKG_GENERATED_DEPENDENCY_COUNT GREATER 0)
         # setup range stop for iteration
         math(EXPR VCPKG_GENERATED_DEPENDENCY_LOOP_STOP "${VCPKG_GENERATED_DEPENDENCY_COUNT} - 1")
-        
+
         # make list
         foreach(DEPENDENCY_INDEX RANGE ${VCPKG_GENERATED_DEPENDENCY_LOOP_STOP})
             string(JSON DEPENDENCY_NAME MEMBER "${VCPKG_GENERATED_DEPENDENCY_OBJECT}" ${DEPENDENCY_INDEX})
@@ -524,7 +547,7 @@ function(vcpkg_manifest_generation_finalize)
                 string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies ${DEPENDENCY_INDEX} "\"${DEPENDENCY_JSON}\"")
             endif()
         endforeach()
-        
+
         message(STATUS "VCPKG auto-generated manifest (${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json):\n${VCPKG_GENERATED_MANIFEST}")
         file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json" "${VCPKG_GENERATED_MANIFEST}")
     endif()

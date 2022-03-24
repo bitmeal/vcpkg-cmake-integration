@@ -21,16 +21,32 @@ vcpkg_add_package(fmt)
 ...
 ```
 
-**What does it do?**
+### What it does & intended use
 * fetch *vcpkg* & build if required
 * provide *"numeric"* or semantic versioning of *vcpkg* itself
 * enable the *vcpkg*-*CMake* toolchain
 * install all requested packages
 * mask *musl-libc* from vcpkg as `x64-linux`/`x86-linux` and auto configure system binary usage ⚡
-  
-  
+
+Intention of this script is to provide rapid setup and integration for *vcpkg* to kickstart your *C++* development on **(mainly) new** projects. Secondary use-case is sharing and reliable builds of projects by persons unfamiliar with *CMake* and managing dependencies for *C++* projects.
+
+#### `vcpkg_add_package()`
+This wrapper around `vcpkg install` makes the use of *vcpkg* completely transparent and is intended for the **setup and prototyping phase** of your project, allowing to focus on your code and not getting distracted by dependency management.
+
+What it does more, is **generating a `vcpkg.json`-manifest** in your build directory, *to be used at a later stage* of your project to pin dependencies!
+> **📌 CMake 3.19 or later is required for automatic manifest generation!**
+
 ## using `vcpkg.json`-manifests
-When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. **Using manifests is (at time of writing) still considered *experimental*. Using versioning and the `versions`-key may currently require a newer *vcpkg* version than tagged as release! Check the [official resources](https://github.com/microsoft/vcpkg) for the state of manifest use! The `edge`-version supports versioning, as per the examples.**
+When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. **Using manifests is (at time of writing) still considered *experimental*. Using versioning and the `versions`-key may currently require a newer *vcpkg* version than tagged as latest release! Check the [official resources](https://github.com/microsoft/vcpkg) for the state of manifest use! The `edge`-version supports versioning, as per the examples.**
+
+To transition to manifests from `vcpkg_add_package()` calls, use the auto-generated manifest in your build directory.
+
+### manifests and container layer caching
+To make use of the manifest to setup your dependencies independently of you project, use following recipe:
+* `ADD` `vcpkg.json`-manifest to your project root inside the container
+* `ADD` your copy of `vcpkg.cmake` to your container
+* create your build directory
+* run `cmake -DVCPKG_PARENT_DIR=<path-to-build-directory> -DVCPKG_VERSION=<desired-vcpkg-version> -P <path-to>/vcpkg.cmake` in your project root
 
 
 ## *vcpkg* versions
