@@ -88,7 +88,8 @@ function(vcpkg_init)
         endif()
         string(REGEX REPLACE "[/\\]$" "" VCPKG_PARENT_DIR "${VCPKG_PARENT_DIR}")
 
-        # set varible to expected path; necessary to detect after a CMake cache clean
+        # set path/location varibles to expected path; necessary to detect after a CMake cache clean
+        vcpkg_set_vcpkg_directory_from_parent()
         vcpkg_set_vcpkg_executable()
     
         # executable is present ? configuring done : fetch and build
@@ -129,8 +130,8 @@ function(vcpkg_init)
             if(NOT EXISTS "${VCPKG_PARENT_DIR}/${VCPKG_BUILD_CMD}" AND NOT EXISTS "${VCPKG_PARENT_DIR}\\${VCPKG_BUILD_CMD}")
                 message(STATUS "VCPKG bootstrap script not found; fetching...")
                 # directory existent ? delete
-                if(EXISTS "${VCPKG_PARENT_DIR}/vcpkg")
-                    file(REMOVE_RECURSE "${VCPKG_PARENT_DIR}/vcpkg")
+                if(EXISTS "${VCPKG_DIRECTORY}")
+                    file(REMOVE_RECURSE "${VCPKG_DIRECTORY}")
                 endif()
 
                 # fetch vcpkg repo
@@ -144,7 +145,7 @@ function(vcpkg_init)
             vcpkg_set_version_checkout()
 
             # checkout asked version
-            execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${VCPKG_VERSION_CHECKOUT} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_GIT_TAG_CHECKOUT_OK)
+            execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${VCPKG_VERSION_CHECKOUT} WORKING_DIRECTORY "${VCPKG_DIRECTORY}" RESULT_VARIABLE VCPKG_GIT_TAG_CHECKOUT_OK)
             if(NOT VCPKG_GIT_TAG_CHECKOUT_OK EQUAL "0")
                 message(FATAL_ERROR "Checking out VCPKG version/tag ${VCPKG_VERSION} failed!")
             endif()
@@ -155,7 +156,7 @@ function(vcpkg_init)
             # endif()
 
             # build vcpkg
-            execute_process(COMMAND ${VCPKG_BUILD_CMD} ${VCPKG_USE_SYSTEM_BINARIES_FLAG} ${VCPKG_METRICS_FLAG} WORKING_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" RESULT_VARIABLE VCPKG_BUILD_OK)
+            execute_process(COMMAND ${VCPKG_BUILD_CMD} ${VCPKG_USE_SYSTEM_BINARIES_FLAG} ${VCPKG_METRICS_FLAG} WORKING_DIRECTORY "${VCPKG_DIRECTORY}" RESULT_VARIABLE VCPKG_BUILD_OK)
             if(NOT VCPKG_BUILD_OK EQUAL "0")
                 message(FATAL_ERROR "Bootstrapping VCPKG failed!")
             else()
@@ -186,9 +187,12 @@ function(vcpkg_init)
 
         # cache executable path
         set(VCPKG_EXECUTABLE ${VCPKG_EXECUTABLE} CACHE STRING "vcpkg executable path" FORCE)
+
+        # initialize manifest generation
+        vcpkg_manifest_generation_init()
     
         # set toolchain
-        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_PARENT_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "${VCPKG_DIRECTORY}/scripts/buildsystems/vcpkg.cmake")
         set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
         set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} CACHE STRING "")
     endif()
@@ -215,24 +219,36 @@ endfunction()
 #     set(VCPKG_TARGET_TRIPLET "x${BITS}-${PLATFORM}" PARENT_SCOPE)
 # endfunction()
 
-# set VCPKG_EXECUTABLE to assumed path based on VCPKG_PARENT_DIR
-# vcpkg_set_vcpkg_executable([VCPKG_PARENT_DIR_EXPLICIT])
+# set VCPKG_DIRECTORY to assumed path based on VCPKG_PARENT_DIR
+# vcpkg_set_vcpkg_directory_from_parent([VCPKG_PARENT_DIR_EXPLICIT])
+function(vcpkg_set_vcpkg_directory_from_parent)
+    if(ARGV0 EQUAL "" OR NOT DEFINED ARGV0)
+        set(VCPKG_DIRECTORY "${VCPKG_PARENT_DIR}/vcpkg" PARENT_SCOPE)
+    else()
+        set(VCPKG_DIRECTORY "${ARGV0}/vcpkg" PARENT_SCOPE)
+    endif()
+    # set(VCPKG_DIRECTORY ${VCPKG_DIRECTORY} CACHE STRING "vcpkg tool location" FORCE)
+endfunction()
+
+
+# set VCPKG_EXECUTABLE to assumed path based on VCPKG_DIRECTORY
+# vcpkg_set_vcpkg_executable([VCPKG_DIRECTORY])
 function(vcpkg_set_vcpkg_executable)
     if(ARGV0 EQUAL "" OR NOT DEFINED ARGV0)
-        set(VCPKG_PARENT_DIR_EXPLICIT ${VCPKG_PARENT_DIR})
+        set(VCPKG_DIRECTORY_EXPLICIT ${VCPKG_DIRECTORY})
     else()
-        set(VCPKG_PARENT_DIR_EXPLICIT ${ARGV0})
+        set(VCPKG_DIRECTORY_EXPLICIT ${ARGV0})
     endif()
 
     if(WIN32)
-        set(VCPKG_EXECUTABLE "${VCPKG_PARENT_DIR_EXPLICIT}/vcpkg/vcpkg.exe" PARENT_SCOPE)
+        set(VCPKG_EXECUTABLE "${VCPKG_DIRECTORY_EXPLICIT}/vcpkg.exe" PARENT_SCOPE)
     else()
-        set(VCPKG_EXECUTABLE "${VCPKG_PARENT_DIR_EXPLICIT}/vcpkg/vcpkg" PARENT_SCOPE)
+        set(VCPKG_EXECUTABLE "${VCPKG_DIRECTORY_EXPLICIT}/vcpkg" PARENT_SCOPE)
     endif()
 endfunction()
 
 # determine git checkout target in: VCPKG_VERSION_CHECKOUT
-# vcpkg_set_version_checkout([VCPKG_VERSION_EXPLICIT] [VCPKG_PARENT_DIR_EXPLICIT])
+# vcpkg_set_version_checkout([VCPKG_VERSION_EXPLICIT] [VCPKG_DIRECTORY_EXPLICIT])
 # TODO: set hash from vcpkg.json manifest if version==""
 function(vcpkg_set_version_checkout)
     if(ARGV0 EQUAL "" OR NOT DEFINED ARGV0)
@@ -241,13 +257,13 @@ function(vcpkg_set_version_checkout)
         set(VCPKG_VERSION_EXPLICIT ${ARGV0})
     endif()
     if(ARGV1 EQUAL "" OR NOT DEFINED ARGV1)
-        set(VCPKG_PARENT_DIR_EXPLICIT ${VCPKG_PARENT_DIR})
+        set(VCPKG_DIRECTORY_EXPLICIT ${VCPKG_DIRECTORY})
     else()
-        set(VCPKG_PARENT_DIR_EXPLICIT ${ARGV1})
+        set(VCPKG_DIRECTORY_EXPLICIT ${ARGV1})
     endif()
 
     # get latest git tag
-    execute_process(COMMAND git for-each-ref refs/tags/ --count=1 --sort=-creatordate --format=%\(refname:short\) WORKING_DIRECTORY "${VCPKG_PARENT_DIR_EXPLICIT}/vcpkg" OUTPUT_VARIABLE VCPKG_GIT_TAG_LATEST)
+    execute_process(COMMAND git for-each-ref refs/tags/ --count=1 --sort=-creatordate --format=%\(refname:short\) WORKING_DIRECTORY "${VCPKG_DIRECTORY_EXPLICIT}" OUTPUT_VARIABLE VCPKG_GIT_TAG_LATEST)
     string(REGEX REPLACE "\n$" "" VCPKG_GIT_TAG_LATEST "${VCPKG_GIT_TAG_LATEST}")
 
     # resolve versions
@@ -372,6 +388,9 @@ function(vcpkg_add_package PKG_NAME)
     execute_process(COMMAND ${VCPKG_EXECUTABLE} ${VCPKG_TARGET_TRIPLET_FLAG} ${VCPKG_RECURSE_REBUILD_FLAG} --feature-flags=-manifests --disable-metrics install "${PKG_NAME}" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
     if(NOT VCPKG_INSTALL_OK EQUAL "0")
         message(FATAL_ERROR "VCPKG: failed fetching ${PKG_NAME}! Did you call vcpkg_init(<...>)?")
+    else()
+        # add package to automatically generated manifest
+        vcpkg_manifest_generation_add_dependency("${PKG_NAME}")
     endif()
 endfunction()
 
@@ -388,6 +407,129 @@ endfunction()
 #         message(FATAL_ERROR "VCPKG: install from manifest failed")
 #     endif()
 # endfunction()
+
+## manifest generation requires CMake > 3.19
+function(vcpkg_manifest_generation_update_cache VCPKG_GENERATED_MANIFEST)
+    string(REGEX REPLACE "\n" "" VCPKG_GENERATED_MANIFEST "${VCPKG_GENERATED_MANIFEST}")
+    set(VCPKG_GENERATED_MANIFEST "${VCPKG_GENERATED_MANIFEST}" CACHE STRING "automatically generated manifest by vcpkg-cmake-integration" FORCE)
+    mark_as_advanced(FORCE VCPKG_GENERATED_MANIFEST)
+endfunction()
+
+
+# build empty json manifest and register deferred call to finalize and write
+function(vcpkg_manifest_generation_init)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+        # init "empty" json and cache variable
+        set(VCPKG_GENERATED_MANIFEST "{}")
+
+        # initialize dependencies as empty list
+        # first vcpkg_add_package will transform to object and install finalization handler
+        # transform to list in finalization step
+        string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies "[]")
+        string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" "$schema" "\"https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json\"")
+
+        vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
+
+        # will be initialized from vcpkg_add_package call
+        # # defer call to finalize manifest
+        # # needs to be called later as project variables are not set when initializing
+        # cmake_language(DEFER CALL vcpkg_manifest_generation_finalize)
+    endif()
+endfunction()
+
+# add dependency to generated manifest
+function(vcpkg_manifest_generation_add_dependency PKG_NAME)
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+        # extract features
+        string(REGEX MATCH "\\[.*\\]" PKG_FEATURES "${PKG_NAME}")
+        string(REPLACE "${PKG_FEATURES}" "" PKG_BASE_NAME "${PKG_NAME}")
+        # make comma separated list
+        string(REPLACE "[" "" PKG_FEATURES "${PKG_FEATURES}")
+        string(REPLACE "]" "" PKG_FEATURES "${PKG_FEATURES}")
+        string(REPLACE " " "" PKG_FEATURES "${PKG_FEATURES}")
+        # build cmake list by separating with ;
+        string(REPLACE "," ";" PKG_FEATURES "${PKG_FEATURES}")
+
+        if(NOT PKG_FEATURES)
+            # set package name string only
+            set(PKG_DEPENDENCY_JSON "\"${PKG_BASE_NAME}\"")
+        else()
+            # build dependency object with features
+            set(PKG_DEPENDENCY_JSON "{}")
+            string(JSON PKG_DEPENDENCY_JSON SET "${PKG_DEPENDENCY_JSON}" name "\"${PKG_BASE_NAME}\"")
+
+            set(FEATURE_LIST_JSON "[]")
+            foreach(FEATURE IN LISTS PKG_FEATURES)
+                if(FEATURE STREQUAL "core")
+                    # set default feature option if special feature "core" is specified
+                    string(JSON PKG_DEPENDENCY_JSON SET "${PKG_DEPENDENCY_JSON}" default-features "false")
+                else()
+                    # add feature to list
+                    string(JSON FEATURE_LIST_JSON_LEN LENGTH "${FEATURE_LIST_JSON}")
+                    string(JSON FEATURE_LIST_JSON SET "${FEATURE_LIST_JSON}" ${FEATURE_LIST_JSON_LEN} "\"${FEATURE}\"")
+                endif()
+            endforeach()
+
+            # build dependency object with feature list
+            string(JSON PKG_DEPENDENCY_JSON SET "${PKG_DEPENDENCY_JSON}" features "${FEATURE_LIST_JSON}")
+        endif()
+
+        # add dependency to manifest
+        # reset to empty object to avoid collissions and track new packages
+        # defer (new) finalization call
+        string(JSON VCPKG_GENERATED_MANIFEST_DEPENDENCIES_TYPE TYPE "${VCPKG_GENERATED_MANIFEST}" dependencies)
+        if(VCPKG_GENERATED_MANIFEST_DEPENDENCIES_TYPE STREQUAL "ARRAY")
+            string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies "{}")
+            cmake_language(DEFER CALL vcpkg_manifest_generation_finalize)
+        endif()
+        string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies "${PKG_BASE_NAME}" "${PKG_DEPENDENCY_JSON}")
+
+        vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
+    endif()
+endfunction()
+
+
+# build empty json manifest and register deferred call to finalize and write
+function(vcpkg_manifest_generation_finalize)
+    # populate project information
+    string(REGEX REPLACE "[^a-z0-9\\.-]" "" VCPKG_GENERATED_MANIFEST_NAME "${PROJECT_NAME}")
+    string(TOLOWER VCPKG_GENERATED_MANIFEST_NAME "${VCPKG_GENERATED_MANIFEST_NAME}")
+    string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" name "\"${VCPKG_GENERATED_MANIFEST_NAME}\"")
+    string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" version "\"${PROJECT_VERSION}\"")
+
+    # write baseline commit
+    execute_process(COMMAND git log --pretty=format:'%H' -1 WORKING_DIRECTORY "${VCPKG_DIRECTORY}" OUTPUT_VARIABLE VCPKG_GENERATED_MANIFEST_BASELINE)
+    string(REPLACE "'" "" VCPKG_GENERATED_MANIFEST_BASELINE "${VCPKG_GENERATED_MANIFEST_BASELINE}")
+    string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" builtin-baseline "\"${VCPKG_GENERATED_MANIFEST_BASELINE}\"")
+
+    # make list from dependency dictionary
+    # cache dependency object
+    string(JSON VCPKG_GENERATED_DEPENDENCY_OBJECT GET "${VCPKG_GENERATED_MANIFEST}" dependencies)
+    # initialize dependencies as list
+    string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies "[]")
+
+    string(JSON VCPKG_GENERATED_DEPENDENCY_COUNT LENGTH "${VCPKG_GENERATED_DEPENDENCY_OBJECT}")
+    if(VCPKG_GENERATED_DEPENDENCY_COUNT GREATER 0)
+        # setup range stop for iteration
+        math(EXPR VCPKG_GENERATED_DEPENDENCY_LOOP_STOP "${VCPKG_GENERATED_DEPENDENCY_COUNT} - 1")
+        
+        # make list
+        foreach(DEPENDENCY_INDEX RANGE ${VCPKG_GENERATED_DEPENDENCY_LOOP_STOP})
+            string(JSON DEPENDENCY_NAME MEMBER "${VCPKG_GENERATED_DEPENDENCY_OBJECT}" ${DEPENDENCY_INDEX})
+            string(JSON DEPENDENCY_JSON GET "${VCPKG_GENERATED_DEPENDENCY_OBJECT}" "${DEPENDENCY_NAME}")
+            string(JSON DEPENDENCY_JSON_TYPE ERROR_VARIABLE DEPENDENCY_JSON_TYPE_ERROR_IGNORE TYPE "${DEPENDENCY_JSON}")
+            if(DEPENDENCY_JSON_TYPE STREQUAL "OBJECT")
+                string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies ${DEPENDENCY_INDEX} "${DEPENDENCY_JSON}")
+            else()
+                string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" dependencies ${DEPENDENCY_INDEX} "\"${DEPENDENCY_JSON}\"")
+            endif()
+        endforeach()
+        
+        message(STATUS "VCPKG auto-generated manifest (${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json):\n${VCPKG_GENERATED_MANIFEST}")
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json" "${VCPKG_GENERATED_MANIFEST}")
+    endif()
+    vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
+endfunction()
 
 
 # get vcpkg and configure toolchain
