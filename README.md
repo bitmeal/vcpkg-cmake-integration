@@ -46,7 +46,7 @@ To make use of the manifest to setup your dependencies independently of you proj
 * `ADD` `vcpkg.json`-manifest to your project root inside the container
 * `ADD` your copy of `vcpkg.cmake` to your container
 * create your build directory
-* run `cmake -DVCPKG_PARENT_DIR=<path-to-build-directory> -DVCPKG_VERSION=<desired-vcpkg-version> -P <path-to>/vcpkg.cmake` in your project root
+* run `cmake -DVCPKG_PARENT_DIR=<path-to-build-directory> -DVCPKG_VERSION=<desired-vcpkg-version> -DVCPKG_DEFAULT_TRIPLET=<triplet> -P <path-to>/vcpkg.cmake` in your project root
 
 
 ## *vcpkg* versions

@@ -56,6 +56,15 @@ function(vcpkg_init)
         set(ENV{VCPKG_FORCE_SYSTEM_BINARIES} "1")
     endif()
 
+    # for use in scripting mode
+    if(CMAKE_SCRIPT_MODE_FILE)
+        if(VCPKG_DEFAULT_TRIPLET)
+            set(ENV{VCPKG_DEFAULT_TRIPLET} "${VCPKG_DEFAULT_TRIPLET}")
+        endif()
+        if(VCPKG_DEFAULT_HOST_TRIPLET)
+            set(ENV{VCPKG_DEFAULT_HOST_TRIPLET} "${VCPKG_DEFAULT_HOST_TRIPLET}")
+        endif()
+    endif()
     # end set environment
 
 
