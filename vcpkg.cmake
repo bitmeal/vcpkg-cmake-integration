@@ -286,7 +286,6 @@ endfunction()
 
 # determine git checkout target in: VCPKG_VERSION_CHECKOUT
 # vcpkg_set_version_checkout([VCPKG_VERSION_EXPLICIT] [VCPKG_DIRECTORY_EXPLICIT])
-# TODO: set hash from vcpkg.json manifest if version==""
 function(vcpkg_set_version_checkout)
     if(ARGV0 EQUAL "" OR NOT DEFINED ARGV0)
         set(VCPKG_VERSION_EXPLICIT ${VCPKG_VERSION})
@@ -304,6 +303,30 @@ function(vcpkg_set_version_checkout)
     string(REGEX REPLACE "\n$" "" VCPKG_GIT_TAG_LATEST "${VCPKG_GIT_TAG_LATEST}")
 
     # resolve versions
+    if(EXISTS "./vcpkg.json")
+        # set hash from vcpkg.json manifest
+        file(READ "./vcpkg.json" VCPKG_MANIFEST_CONTENTS)
+
+        if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+            string(JSON VCPKG_BASELINE GET "${VCPKG_MANIFEST_CONTENTS}" "builtin-baseline")
+        else()
+            string(REGEX REPLACE "[\n ]" "" VCPKG_MANIFEST_CONTENTS "${VCPKG_MANIFEST_CONTENTS}")
+            message(STATUS "manifest: ${VCPKG_MANIFEST_CONTENTS}")
+            string(REGEX MATCH "\"builtin-baseline\":\"[0-9a-f]+\"" VCPKG_BASELINE "${VCPKG_MANIFEST_CONTENTS}")
+            string(REPLACE "\"builtin-baseline\":" "" VCPKG_BASELINE "${VCPKG_BASELINE}")
+            string(REPLACE "\"" "" VCPKG_BASELINE "${VCPKG_BASELINE}")
+            message(STATUS "basline commit: ${VCPKG_BASELINE}")
+        endif()
+
+        if(NOT "${VCPKG_BASELINE}" EQUAL "")
+            if(NOT "${VCPKG_VERSION}" EQUAL "" AND DEFINED VCPKG_VERSION)
+                message(WARNING "VCPKG_VERSION was specified, but vcpkg.json manifest is used and specifies a builtin-baseline; using builtin-baseline: ${VCPKG_BASELINE}")
+            endif()
+            set(VCPKG_VERSION_EXPLICIT "${VCPKG_BASELINE}")
+            message(STATUS "Using VCPKG Version: <manifest builtin-baseline>")
+        endif()
+    endif()
+
     if("${VCPKG_VERSION_EXPLICIT}" STREQUAL "latest" OR "${VCPKG_VERSION_EXPLICIT}" EQUAL "" OR NOT DEFINED VCPKG_VERSION_EXPLICIT)
         set(VCPKG_VERSION_CHECKOUT ${VCPKG_GIT_TAG_LATEST})
         message(STATUS "Using VCPKG Version: ${VCPKG_VERSION_EXPLICIT} (latest)")

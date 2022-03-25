@@ -47,7 +47,7 @@ When a `vcpkg.json` manifest file is present, all packages from this manifest wi
 cmake -DVCPKG_PARENT_DIR=<path-to-build-directory> -P <path-to>/vcpkg.cmake
 ```
 * **Set your build directory** using `-DVCPKG_PARENT_DIR=<path-to-build-directory>` (directory will be created if not exists)
-* Set your *vcpkg* version as outlined below in ***vcpkg* versions** (`-DVCPKG_VERSION=<version>`)
+* if your manifest has no `builtin-baseline`, set your *vcpkg* version as outlined below in ***vcpkg* versions** (`-DVCPKG_VERSION=<version>`)
 * `VCPKG_TARGET_TRIPLET`/`VCPKG_DEFAULT_TRIPLET` CMake variables will set `ENV{VCPKG_DEFAULT_TRIPLET}`
 * `VCPKG_HOST_TRIPLET`/`VCPKG_DEFAULT_HOST_TRIPLET` CMake variables will set `ENV{VCPKG_DEFAULT_HOST_TRIPLET}`
 
@@ -71,6 +71,8 @@ Valid values for `<version>` are:
 * `<empty>`: gets you `latest`
 * `edge`: latest commit on *vcpkg* master branch
 * `<commit-hash>/<tag>`: any tag or commit hash from the *vcpkg*-repo may be used
+
+> 📌 if a `vcpkg.json` manifest exists and specifies a `builtin-baseline`, this commit will be checked out
   
   
 ## setting target/host architecture
