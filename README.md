@@ -37,7 +37,7 @@ What it does more, is **generating a `vcpkg.json`-manifest** in your build direc
 > **📌 CMake 3.19 or later is required for automatic manifest generation!**
 
 ## using `vcpkg.json`-manifests
-When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. **Using manifests is (at time of writing) still considered *experimental*. Using versioning and the `versions`-key may currently require a newer *vcpkg* version than tagged as latest release! Check the [official resources](https://github.com/microsoft/vcpkg) for the state of manifest use! The `edge`-version supports versioning, as per the examples.**
+When a `vcpkg.json` manifest file is present, all packages from this manifest will be installed. Per default, `manifests` and `versions` features are enabled. **Using manifests is (at time of writing) still considered *experimental*. Using versioning and the `versions`-key may currently require a newer *vcpkg* version than tagged as latest release! Check the [official resources](https://github.com/microsoft/vcpkg) for the state of manifest use! The `edge`-version supports versioning, as per the examples/tests.**
 
 > **ℹ To transition to manifests from `vcpkg_add_package()` calls, use the *auto-generated manifest in your build directory*.**
 

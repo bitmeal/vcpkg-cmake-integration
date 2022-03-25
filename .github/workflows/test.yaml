@@ -1,0 +1,170 @@
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  basic_test:
+    name: "basic test: ${{ matrix.mode }}@${{ matrix.os }}-[${{ matrix.build_type }}]"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        build_type: [Release, Debug]
+        mode: [manifest, packages]
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v2
+      ###############################################
+      # toolchain setup
+      - 
+        name: Setup Toolchain Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          choco install -y ninja
+          ninja --version
+          cmake --version
+      - 
+        name: Setup Toolchain Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          ninja --version
+          cmake --version
+      ###############################################
+      # build and run tests
+      -
+        name: Configure
+        working-directory: test/${{ matrix.mode }}
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+      -
+        name: Build
+        working-directory: test/${{ matrix.mode }}
+        run: |
+          cmake --build build --config ${{ matrix.build_type }}
+      -
+        name: Test
+        working-directory: test/${{ matrix.mode }}
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} --target test
+  
+
+  auto_gen_manifest_test:
+    name: "auto generated manifest test @${{ matrix.os }}-[${{ matrix.build_type }}]"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        build_type: [Release, Debug]
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v2
+      ###############################################
+      # toolchain setup
+      - 
+        name: Setup Toolchain Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          choco install -y ninja
+          ninja --version
+          cmake --version
+      - 
+        name: Setup Toolchain Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          ninja --version
+          cmake --version
+      ###############################################
+      # build and run tests
+      -
+        name: "Configure: build and fetch manifest"
+        working-directory: test/manifest_packages_autogen
+        run: |
+          cmake -B build -DVCPKG_ADD_PACKAGES=true -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+          cp build/vcpkg.json .
+          rm -rf build
+      -
+        name: "Configure: from manifest"
+        working-directory: test/manifest_packages_autogen
+        run: |
+          cmake -B build -DVCPKG_ADD_PACKAGES=false -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+      -
+        name: Build
+        working-directory: test/manifest_packages_autogen
+        run: |
+          cmake --build build --config ${{ matrix.build_type }}
+      -
+        name: Test
+        working-directory: test/manifest_packages_autogen
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} --target test
+
+  script_mode_install_manifest_test:
+    name: "script mode install from manifest test @${{ matrix.os }}-[${{ matrix.build_type }}]"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        build_type: [Release, Debug]
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v2
+      ###############################################
+      # toolchain setup
+      - 
+        name: Setup Toolchain Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          choco install -y ninja
+          ninja --version
+          cmake --version
+      - 
+        name: Setup Toolchain Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          ninja --version
+          cmake --version
+      ###############################################
+      # build and run tests
+      -
+        name: Prepare
+        shell: bash
+        run: |
+          mkdir -p test/script_mode_install_manifest
+          cp test/manifest/vcpkg.json test/script_mode_install_manifest/
+      -
+        name: Setup vcpkg and install from manifest
+        working-directory: test/script_mode_install_manifest
+        run: |
+          cmake -DVCPKG_PARENT_DIR=./build -P ./../../vcpkg.cmake
+      -
+        name: Configure
+        timeout-minutes: 1
+        working-directory: test/script_mode_install_manifest
+        run: |
+          cp ../manifest/CMakeLists.txt .
+          cmake -B build -DVCPKG_ADD_PACKAGES=false -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+      -
+        name: Build
+        working-directory: test/script_mode_install_manifest
+        run: |
+          cmake --build build --config ${{ matrix.build_type }}
+      -
+        name: Test
+        working-directory: test/script_mode_install_manifest
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} --target test
