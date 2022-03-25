@@ -1,4 +1,5 @@
 # to be included as common build and test facility by individual tests
+set(CMAKE_CXX_STANDARD 17)
 
 ## resolve dependencies
 find_package(fmt CONFIG REQUIRED)

@@ -170,6 +170,8 @@ function(vcpkg_init)
             # compute git checkout target
             vcpkg_set_version_checkout()
 
+            # hide detached head notice
+            execute_process(COMMAND ${GIT_EXECUTABLE} config advice.detachedHead false WORKING_DIRECTORY "${VCPKG_DIRECTORY}" RESULT_VARIABLE VCPKG_GIT_HIDE_DETACHED_HEAD_IGNORED)
             # checkout asked version
             execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${VCPKG_VERSION_CHECKOUT} WORKING_DIRECTORY "${VCPKG_DIRECTORY}" RESULT_VARIABLE VCPKG_GIT_TAG_CHECKOUT_OK)
             if(NOT VCPKG_GIT_TAG_CHECKOUT_OK EQUAL "0")

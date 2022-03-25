@@ -152,12 +152,15 @@ jobs:
         run: |
           cmake -DVCPKG_PARENT_DIR=./build -P ./../../vcpkg.cmake
       -
+        name: Add CMakeLists.txt
+        run: |
+          cp test/manifest/CMakeLists.txt test/script_mode_install_manifest/
+      -
         name: Configure
         timeout-minutes: 1
         working-directory: test/script_mode_install_manifest
         run: |
-          cp ../manifest/CMakeLists.txt .
-          cmake -B build -DVCPKG_ADD_PACKAGES=false -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja
       -
         name: Build
         working-directory: test/script_mode_install_manifest
