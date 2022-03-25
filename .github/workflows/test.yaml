@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-2016, ubuntu-latest]
         build_type: [Release, Debug]
         mode: [manifest, packages]
     steps:
@@ -40,15 +40,6 @@ jobs:
       # build and run tests
       -
         name: Configure
-        if: startsWith(matrix.os, 'windows')
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows
-        working-directory: test/${{ matrix.mode }}
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
-      -
-        name: Configure
-        if: startsWith(matrix.os, 'ubuntu')
         working-directory: test/${{ matrix.mode }}
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
@@ -97,17 +88,6 @@ jobs:
       # build and run tests
       -
         name: "Configure: build and fetch manifest"
-        if: startsWith(matrix.os, 'windows')
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows
-        working-directory: test/manifest_packages_autogen
-        run: |
-          cmake -B build -DVCPKG_ADD_PACKAGES=true -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
-          cp build/vcpkg.json .
-          rm -rf build
-      -
-        name: "Configure: build and fetch manifest"
-        if: startsWith(matrix.os, 'ubuntu')
         working-directory: test/manifest_packages_autogen
         run: |
           cmake -B build -DVCPKG_ADD_PACKAGES=true -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
@@ -168,15 +148,6 @@ jobs:
           cp test/manifest/vcpkg.json test/script_mode_install_manifest/
       -
         name: Setup vcpkg and install from manifest
-        if: startsWith(matrix.os, 'windows')
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows
-        working-directory: test/script_mode_install_manifest
-        run: |
-          cmake -DVCPKG_PARENT_DIR=./build -DVCPKG_TARGET_TRIPLET=x64-windows -P ./../../vcpkg.cmake
-      -
-        name: Setup vcpkg and install from manifest
-        if: startsWith(matrix.os, 'ubuntu')
         working-directory: test/script_mode_install_manifest
         run: |
           cmake -DVCPKG_PARENT_DIR=./build -P ./../../vcpkg.cmake
@@ -186,16 +157,6 @@ jobs:
           cp test/manifest/CMakeLists.txt test/script_mode_install_manifest/
       -
         name: Configure
-        if: startsWith(matrix.os, 'windows')
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows
-        timeout-minutes: 1
-        working-directory: test/script_mode_install_manifest
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
-      -
-        name: Configure
-        if: startsWith(matrix.os, 'ubuntu')
         timeout-minutes: 1
         working-directory: test/script_mode_install_manifest
         run: |
