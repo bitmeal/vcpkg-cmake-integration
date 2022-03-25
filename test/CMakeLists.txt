@@ -6,10 +6,10 @@ find_path(PLOG_INCLUDE_DIRS "plog/Init.h" REQUIRED)
 
 
 ## build "tests/examples"
-add_executable(fmt_test ../test-fmt.cpp)
+add_executable(fmt_test test-fmt.cpp)
 target_link_libraries(fmt_test fmt::fmt)
 
-add_executable(plog_test ../test-plog.cpp)
+add_executable(plog_test test-plog.cpp)
 target_include_directories(plog_test PRIVATE ${PLOG_INCLUDE_DIRS})
 
 
