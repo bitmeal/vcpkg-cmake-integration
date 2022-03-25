@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
-# Copyright (C) 2021, Arne Wendt
+# Copyright (C) 2022, Arne Wendt
 #
 
 # vcpkg examples use 3.0.0, assuming this as minimum version for vcpkg cmake toolchain
@@ -58,8 +58,14 @@ function(vcpkg_init)
 
     # for use in scripting mode
     if(CMAKE_SCRIPT_MODE_FILE)
+        if(VCPKG_TARGET_TRIPLET)
+            set(ENV{VCPKG_DEFAULT_TRIPLET} "${VCPKG_DEFAULT_TRIPLET}")
+        endif()
         if(VCPKG_DEFAULT_TRIPLET)
             set(ENV{VCPKG_DEFAULT_TRIPLET} "${VCPKG_DEFAULT_TRIPLET}")
+        endif()
+        if(VCPKG_HOST_TRIPLET)
+            set(ENV{VCPKG_DEFAULT_HOST_TRIPLET} "${VCPKG_DEFAULT_HOST_TRIPLET}")
         endif()
         if(VCPKG_DEFAULT_HOST_TRIPLET)
             set(ENV{VCPKG_DEFAULT_HOST_TRIPLET} "${VCPKG_DEFAULT_HOST_TRIPLET}")
