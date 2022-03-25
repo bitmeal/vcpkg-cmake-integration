@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2016, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
         build_type: [Release, Debug]
         mode: [manifest, packages]
     steps:
@@ -28,6 +28,12 @@ jobs:
           choco install -y ninja
           ninja --version
           cmake --version
+      - 
+        name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        if: startsWith(matrix.os, 'windows')
+        with:
+          arch: x64
       - 
         name: Setup Toolchain Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
@@ -76,6 +82,12 @@ jobs:
           choco install -y ninja
           ninja --version
           cmake --version
+      - 
+        name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        if: startsWith(matrix.os, 'windows')
+        with:
+          arch: x64
       - 
         name: Setup Toolchain Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
@@ -130,6 +142,12 @@ jobs:
           choco install -y ninja
           ninja --version
           cmake --version
+      - 
+        name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        if: startsWith(matrix.os, 'windows')
+        with:
+          arch: x64
       - 
         name: Setup Toolchain Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
