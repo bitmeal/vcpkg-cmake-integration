@@ -99,10 +99,17 @@ jobs:
       ###############################################
       # build and run tests
       -
-        name: "Configure: build and fetch manifest"
+        name: "Configure: build manifest"
         working-directory: test/manifest_packages_autogen
         run: |
           cmake -B build -DVCPKG_ADD_PACKAGES=true -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -G Ninja .
+          cp build/vcpkg.json .
+          rm -rf build
+      -
+        name: "Setup Manifest Stage 2: manifest build"
+        working-directory: test/manifest_packages_autogen
+        shell: bash
+        run: |
           cp build/vcpkg.json .
           rm -rf build
       -
@@ -168,7 +175,7 @@ jobs:
         name: Setup vcpkg and install from manifest
         working-directory: test/script_mode_install_manifest
         run: |
-          cmake -DVCPKG_PARENT_DIR=./build -P ./../../vcpkg.cmake
+          cmake -DVCPKG_PARENT_DIR=build -P ./../../vcpkg.cmake
       -
         name: Add CMakeLists.txt
         run: |
