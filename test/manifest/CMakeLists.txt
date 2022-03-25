@@ -15,4 +15,5 @@ project(vcpkg-cmake-test VERSION 0.1.0)
 
 
 # configure build and tests
+enable_testing()
 add_subdirectory("../" "${CMAKE_CURRENT_BINARY_DIR}/test")

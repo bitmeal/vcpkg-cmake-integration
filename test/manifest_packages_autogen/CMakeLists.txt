@@ -22,4 +22,5 @@ endif()
 
 
 # configure build and tests
+enable_testing()
 add_subdirectory("../" "${CMAKE_CURRENT_BINARY_DIR}/test")
