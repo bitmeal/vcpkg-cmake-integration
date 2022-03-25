@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(VCPKG_VERSION)
 include(../../vcpkg.cmake)
 
-project(vcpkg-cmake-test VERSION 0.1.0)
+project(vcpkg-cmake-test-manifest VERSION 0.1.0)
 
 
 # configure build and tests

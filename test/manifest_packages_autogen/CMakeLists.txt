@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(VCPKG_VERSION edge)
 include(../../vcpkg.cmake)
 
-project(vcpkg-cmake-test VERSION 0.1.0)
+project(vcpkg-cmake-test-manifest-autogen VERSION 0.1.0)
 
 
 # add packages
