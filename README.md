@@ -1,4 +1,8 @@
 # vcpkg 💕 CMake integration
+[![test](https://github.com/bitmeal/vcpkg-cmake-integration/actions/workflows/test.yaml/badge.svg)](https://github.com/bitmeal/vcpkg-cmake-integration/actions/workflows/test.yaml)
+MSVC19@`windows-latest`(*Windows Server 2019*) + GCC 9.3@`ubuntu-latest`(*Ubuntu 20.04*)
+
+---
 **Buckle up and get lift:**
 * add a copy of `vcpkg.cmake` to your project, or include as git-*submodule*
 * add `include(vcpkg.cmake)` before your call to `project(...)` [in your top-level `CMakeListst.txt`]
