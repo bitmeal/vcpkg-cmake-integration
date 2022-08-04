@@ -4,12 +4,12 @@
     "dependencies": [
         {
             "name": "fmt",
-            "version>=": "7.1.3#1"
+            "version>=": "8.1.1#2"
         },
         {
             "name": "plog",
-            "version>=": "1.1.5"
+            "version>=": "1.1.8"
         }
     ],
-    "builtin-baseline": "307ac18b08e4125d3c521a86b7d7b317629be277"
+    "builtin-baseline": "e6a000679745f8ea3f98067e5f3753d3cbecb948"
 }
