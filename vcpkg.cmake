@@ -477,7 +477,7 @@ endfunction()
 ## manifest generation requires CMake > 3.19
 function(vcpkg_manifest_generation_update_cache VCPKG_GENERATED_MANIFEST)
     string(REGEX REPLACE "\n" "" VCPKG_GENERATED_MANIFEST "${VCPKG_GENERATED_MANIFEST}")
-    set(VCPKG_GENERATED_MANIFEST "${VCPKG_GENERATED_MANIFEST}" CACHE STRING "automatically generated manifest by vcpkg-cmake-integration" FORCE)
+    set(VCPKG_GENERATED_MANIFEST "${VCPKG_GENERATED_MANIFEST}" CACHE STRING "template for automatically generated manifest by vcpkg-cmake-integration" FORCE)
     mark_as_advanced(FORCE VCPKG_GENERATED_MANIFEST)
 endfunction()
 
@@ -572,6 +572,8 @@ function(vcpkg_manifest_generation_finalize)
             string(JSON VCPKG_GENERATED_MANIFEST SET "${VCPKG_GENERATED_MANIFEST}" version "\"${PROJECT_VERSION}\"")
         endif()
 
+        vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
+
         # make list from dependency dictionary
         # cache dependency object
         string(JSON VCPKG_GENERATED_DEPENDENCY_OBJECT GET "${VCPKG_GENERATED_MANIFEST}" dependencies)
@@ -598,8 +600,6 @@ function(vcpkg_manifest_generation_finalize)
 
         message(STATUS "VCPKG auto-generated manifest (${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json):\n${VCPKG_GENERATED_MANIFEST}")
         file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/vcpkg.json" "${VCPKG_GENERATED_MANIFEST}")
-
-        vcpkg_manifest_generation_update_cache("${VCPKG_GENERATED_MANIFEST}")
     endif()
 endfunction()
 
