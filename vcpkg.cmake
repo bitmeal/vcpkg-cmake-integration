@@ -153,7 +153,7 @@ function(vcpkg_init)
             # FetchContent_Populate(vcpkg)
 
             # check for bootstrap script ? ok : fetch repository
-            if(NOT EXISTS "${VCPKG_PARENT_DIR}/${VCPKG_BUILD_CMD}" AND NOT EXISTS "${VCPKG_PARENT_DIR}\\${VCPKG_BUILD_CMD}")
+            if(NOT EXISTS "${VCPKG_DIRECTORY}/${VCPKG_BUILD_CMD}" AND NOT EXISTS "${VCPKG_DIRECTORY}\\${VCPKG_BUILD_CMD}")
                 message(STATUS "VCPKG bootstrap script not found; fetching...")
                 # directory existent ? delete
                 if(EXISTS "${VCPKG_DIRECTORY}")
@@ -467,8 +467,9 @@ function(vcpkg_install_manifest)
     # endif()
     # message(STATUS "VCPKG: install from manifest; using target triplet: ${VCPKG_TARGET_TRIPLET}")
     # execute_process(COMMAND ${VCPKG_EXECUTABLE} --triplet=${VCPKG_TARGET_TRIPLET} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE VCPKG_INSTALL_OK)
-    
-    execute_process(COMMAND ${VCPKG_EXECUTABLE} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY "./" RESULT_VARIABLE VCPKG_INSTALL_OK)
+    get_filename_component(VCPKG_EXECUTABLE_ABS ${VCPKG_EXECUTABLE} ABSOLUTE)
+    file(COPY "./vcpkg.json" DESTINATION "${VCPKG_PARENT_DIR}")
+    execute_process(COMMAND ${VCPKG_EXECUTABLE_ABS} --feature-flags=manifests,versions --disable-metrics install WORKING_DIRECTORY "${VCPKG_PARENT_DIR}" RESULT_VARIABLE VCPKG_INSTALL_OK)
     if(NOT VCPKG_INSTALL_OK EQUAL "0")
         message(FATAL_ERROR "VCPKG: install from manifest failed")
     endif()
