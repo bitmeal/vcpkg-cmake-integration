@@ -348,8 +348,8 @@ endfunction()
 
 # sets VCPKG_PLATFORM_MUSL_LIBC(ON|OFF)
 function(vcpkg_get_set_musl_libc)
-    if(WIN32)
-        # is windows
+    if(WIN32 OR APPLE)
+        # is windows or mac
         set(VCPKG_PLATFORM_MUSL_LIBC OFF)
     else()
         execute_process(COMMAND getconf GNU_LIBC_VERSION RESULT_VARIABLE VCPKG_PLATFORM_GLIBC)
