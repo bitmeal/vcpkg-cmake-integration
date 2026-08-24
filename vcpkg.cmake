@@ -5,8 +5,8 @@
 # Copyright (C) 2022, Arne Wendt
 #
 
-# vcpkg examples use 3.0.0, assuming this as minimum version for vcpkg cmake toolchain
-cmake_minimum_required(VERSION 3.0.0)
+# whilst vcpkg examples use 3.0.0, support for versions prior to 3.5 was deprecated in 3.27 and removed in 4.0
+cmake_minimum_required(VERSION 3.5.0)
 
 # config:
 # - VCPKG_VERSION:
